@@ -1,13 +1,22 @@
+import "dotenv/config";
 import express from "express";
 import bodyParser from "body-parser";
-// import mongoose from "mongoose";
-// import MarksSchema from "./Schema.js";
+import mongoose from "mongoose";
 
 const app = express();
+mongoose.connect(process.env.MONGO_URI);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-const port = 3000;
+const port = process.env.PORT || 3000;
+const Schema = new mongoose.Schema({
+  uid: String,
+  sem1: Number,
+  sem2: Number,
+  cgpa: Number,
+});
+
+var GradeSchema = mongoose.model("grades", Schema);
 
 const data = [
   { uid: "A001", sem1: 3.5, sem2: 3.8, cgpa: 3.65 },
@@ -17,13 +26,26 @@ const data = [
   { uid: "A005", sem1: 3.7, sem2: 3.9, cgpa: 3.8 },
 ];
 
-app.get("/students", (req, res) => {
-  res.send(data);
+app.get("/students", async (req, res) => {
+  try {
+    const grade = await GradeSchema.find();
+    res.status(200).json(grade);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+  //   res.send(data);
 });
 
-app.post("/students", (req, res) => {
-  data.push(req.body);
-  res.send(req.body);
+app.post("/students", async (req, res) => {
+  const data = req.body;
+  const newData = new GradeSchema(data);
+  try {
+    await newData.save();
+    res.status(201).json(newData);
+  } catch (error) {
+    console.error(error);
+    res.status(409).json({ message: error.message });
+  }
 });
 
 app.put("/students/:uid", (req, res) => {
